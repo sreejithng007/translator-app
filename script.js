@@ -7,7 +7,18 @@ const mapping = {
   U: "三", V: "妈", W: "住", X: "我", Y: "和", Z: "你"
 };
 
-document.getElementById('translateBtn').addEventListener('click', function() {
+// Reverse mapping (symbols → English)
+const reverseMapping = {};
+for (let key in mapping) {
+  reverseMapping[mapping[key]] = key;
+}
+
+// Google Form setup
+const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSdtNGv4vtewRi84URSUeLyuAO7FPahqgA4WDVd_9gsCHwTgWA/formResponse";
+const GOOGLE_FORM_FIELD = "entry.997803431"; // Replace with your actual entry field ID
+
+// Translate English → Symbols
+function translateToSymbols() {
   const input = document.getElementById('inputText').value;
   let output = '';
 
@@ -16,7 +27,7 @@ document.getElementById('translateBtn').addEventListener('click', function() {
       if (ch === ch.toLowerCase() && /[a-z]/.test(ch)) {
         output += `<span class="small-char">${mapping[ch.toUpperCase()]}</span>`;
       } else {
-        output += mapping[ch];
+        output += mapping[ch.toUpperCase()];
       }
     } else {
       output += ch;
@@ -24,13 +35,42 @@ document.getElementById('translateBtn').addEventListener('click', function() {
   }
 
   document.getElementById('outputText').innerHTML = output;
-
-  // Save to Google Sheet
   sendToGoogleSheet(input);
+  document.getElementById('statusMsg').textContent = "Translated to symbols and saved!";
+}
 
-  // Clear message
-  document.getElementById('statusMsg').textContent = "Translation complete and saved!";
-});
+// Translate Symbols → English
+function translateToEnglish() {
+  const input = document.getElementById('inputText').value.trim();
+  let output = '';
+
+  for (let ch of input) {
+    if (reverseMapping[ch]) {
+      output += reverseMapping[ch];
+    } else {
+      output += ch;
+    }
+  }
+
+  document.getElementById('outputText').textContent = output;
+  document.getElementById('statusMsg').textContent = "Translated back to English!";
+}
+
+// Send data to Google Sheet
+function sendToGoogleSheet(text) {
+  const formData = new FormData();
+  formData.append(GOOGLE_FORM_FIELD, text);
+
+  fetch(GOOGLE_FORM_ACTION, {
+    method: "POST",
+    mode: "no-cors",
+    body: formData
+  }).then(() => {
+    console.log("Data sent to Google Sheet");
+  }).catch(err => {
+    console.error("Error sending data:", err);
+  });
+}
 
 // Copy output text
 document.getElementById('copyBtn').addEventListener('click', function() {
@@ -46,21 +86,18 @@ document.getElementById('copyBtn').addEventListener('click', function() {
   });
 });
 
-// Replace with your actual Google Form link
-const GOOGLE_FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSdtNGv4vtewRi84URSUeLyuAO7FPahqgA4WDVd_9gsCHwTgWA/formResponse";
-const GOOGLE_FORM_FIELD = "entry.997803431"; // Replace with your actual entry field ID
+// Add new "Translate Back" button dynamically
+const backBtn = document.createElement('button');
+backBtn.textContent = "Translate Back";
+backBtn.style.background = "#9C27B0";
+backBtn.style.marginLeft = "10px";
+backBtn.style.color = "white";
+backBtn.style.borderRadius = "8px";
+backBtn.style.cursor = "pointer";
+backBtn.addEventListener('click', translateToEnglish);
 
-function sendToGoogleSheet(text) {
-  const formData = new FormData();
-  formData.append(GOOGLE_FORM_FIELD, text);
+// Add it next to the translate button
+document.getElementById('translateBtn').after(backBtn);
 
-  fetch(GOOGLE_FORM_ACTION, {
-    method: "POST",
-    mode: "no-cors",
-    body: formData
-  }).then(() => {
-    console.log("Data sent to Google Sheet");
-  }).catch(err => {
-    console.error("Error sending data:", err);
-  });
-}
+// Main translate button
+document.getElementById('translateBtn').addEventListener('click', translateToSymbols);
